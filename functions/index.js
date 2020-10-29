@@ -10,14 +10,14 @@ exports.videoDynamicLink = functions.firestore
     .onCreate((snap, context) => {
         let videoData = snap.data();
         const videoId = snap.id;
-        const videoRef = db.collection('videos').doc(videoId);
+        const videoRef = snap.ref;
 
-        if (videoData.addedDynamicLink == true) {
+        if (videoData.addedDynamicLink === true) {
             return;
         }
 
         const options = {
-            method: 'videoDynamicLink',
+            method: 'POST',
             uri: `https://firebasedynamiclinks.googleapis.com/v1/shortLinks?key=${functions.config().applinks.key}`,
             body: {
                 "longDynamicLink": makeDynamicLongLink(videoData, videoId)
@@ -25,8 +25,10 @@ exports.videoDynamicLink = functions.firestore
             json: true
         };
 
-        request(options)
-            .then(function (parsedBody) {
+        console.log(options);
+
+        return request(options)
+            .then((parsedBody) => {
                 console.log(parsedBody);
                 return parsedBody.shortLink;
             })
@@ -36,11 +38,11 @@ exports.videoDynamicLink = functions.firestore
                 videoData.addedDynamicLink = true;
                 videoData.dynamicLink = shortLink;
                 return videoRef.update(videoData);
-            })
+            }).catch(error => console.log(error))
     });
 
 function makeDynamicLongLink(videoData, videoId) {
-    return urlBuilder(`${functions.config().applinks.link}`, {
+    const link = urlBuilder(`${functions.config().applinks.link}`, {
         queryParams: {
             link: "https://wowtalent.com/player?videoId=" + videoId,
             apn: "com.example.wowtalent",
@@ -50,4 +52,6 @@ function makeDynamicLongLink(videoData, videoId) {
             si: videoData.thumbUrl
         }
     });
+    console.log(link)
+    return link;
 }
